@@ -1,6 +1,6 @@
 /*
  * Nombre del archivo:   main.c
- * Autor: 
+ * Autor: Catalusci
  *
  * Descripción: 
  *        Proyecto usando un display matricial con MAX7219.
@@ -60,6 +60,12 @@ typedef struct {
     int8_t dir_y;
 } ball_t;
 
+typedef struct{
+    uint8_t x;
+    uint8_t y;
+    uint8_t size;
+}line_t;
+
 
 /* ------------------------ Prototipos de funciones ------------------------- */
 void gpio_config();
@@ -74,14 +80,18 @@ void uart_tx_byte(uint8_t dato);
 void main(void) {                       // Función principal
     ball_t ball;
     int i;
+    line_t line;
     gpio_config();                      // Inicializo las entradas y salidas
     uart_config();
     
-    ball.x = 2;
+    ball.x = 6;
     ball.y = 2;
-    
     ball.dir_x = 1;
     ball.dir_y = 1;
+    
+    line.x = 0;
+    line.y = 3;
+    line.size = 3;
             
     PORTD = 0;
     PIN_LED1 = 0;                       // Apago el LED1
@@ -102,22 +112,43 @@ void main(void) {                       // Función principal
         max7219_clear_display(MAX_DISPLAY_0);
         max7219_set_led(MAX_DISPLAY_0, ball.x, ball.y, LED_ON );
         
+        max7219_set_led(MAX_DISPLAY_0, line.y, line.x, LED_ON );
+        max7219_set_led(MAX_DISPLAY_0, line.y + 1, line.x, LED_ON );
+        max7219_set_led(MAX_DISPLAY_0, line.y + 2, line.x, LED_ON );
+        
         __delay_ms(100);
+        
+        
+        //teclas
+        if(PIN_TEC1 == 0 && line.y + line.size < 8 ){
+            line.y++;
+        }
+        if(PIN_TEC2 == 0 && line.y > 0){
+            line.y--;
+        }  
+        
         
         ball.x += ball.dir_x;  
         ball.y += ball.dir_y;
         
-        __delay_ms(500);
+        __delay_ms(200);
         
-        if (ball.x == 7 || ball.x == 0){
+        if (ball.x == 7 || ball.x == 0){       //rebotala pelota en el limite horiszontal
             ball.dir_x *= -1;
         }
         
-        if (ball.y == 7 || ball.y == 0){
+        if (ball.y == 7 || ball.y == 0){       //rebotala pelota en el limite vertical
             ball.dir_y *= -1;
         }
         
         
+        if(ball.x == line.x +1 && ball.dir_x < 0){    
+            //si la pelota va en direccion a la paleta y esta en la columna anterior
+            if (ball.y >= line.y && ball.y <= line.y + line.size){   //rebota cuando coinciden pelota y paleta
+                ball.dir_x *= -1;
+            
+            }
+        }
         
         
        }
@@ -139,6 +170,7 @@ void gpio_config() {
     ANSELH = 0;                         // como digitales
     
     TRIS_TEC1 = 1;                      // Configuro la TEC1 como entrada
+    TRIS_TEC2 = 1;
     TRIS_LED1 = 0;                      // Configuro el LED1 como salida
     
     TRISD = 0;
